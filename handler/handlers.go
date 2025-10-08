@@ -1,8 +1,14 @@
 package handler
 
-import "project/db"
+import (
+	"net/http"
+	"project/db"
+	"go.uber.org/zap"
+)
 
-func RegisterHandlers(db *db.MemoryDB) {
-	RegisterMovieHandler(db)
-	RegisterCharacterHandler(db)
+func RegisterHandlers(db *db.MemoryDB, mux *http.ServeMux, echo *EchoHandler, log *zap.Logger) {
+	RegisterMovieHandler(db)      // unchanged
+	RegisterCharacterHandler(db)  // unchanged
+	RegisterCRUDHandlers(db, mux, log)
+	mux.Handle("/echo", echo)
 }
