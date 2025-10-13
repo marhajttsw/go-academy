@@ -1,10 +1,15 @@
 package db
 
-import "project/entity"
+import "project/internal/entity"
 
 func (db *MemoryDB) AddMovie(movie entity.Movie) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
+
+	if movie.ID == 0 {
+		movie.ID = db.nextMovieID
+		db.nextMovieID++
+	}
 	db.movies[movie.ID] = movie
 	db.titleToID[movie.Title] = movie.ID
 }
@@ -25,6 +30,13 @@ func (db *MemoryDB) UpdateMovie(title string, updated entity.Movie) bool {
 	defer db.mu.Unlock()
 	id, exists := db.titleToID[title]
 	if exists {
+		// Preserve the original ID if caller didn't set it or set a different one.
+		updated.ID = id
+		// If title changed, update the title index mapping
+		if updated.Title != title {
+			delete(db.titleToID, title)
+			db.titleToID[updated.Title] = id
+		}
 		db.movies[id] = updated
 		return true
 	}
@@ -52,4 +64,42 @@ func (db *MemoryDB) ListMovies() []entity.Movie {
 		movies = append(movies, movie)
 	}
 	return movies
+}
+
+func (db *MemoryDB) GetMovieByID(id uint64) (entity.Movie, bool) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+	m, ok := db.movies[id]
+	return m, ok
+}
+
+func (db *MemoryDB) UpdateMovieByID(id uint64, updated entity.Movie) bool {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	old, ok := db.movies[id]
+	if !ok {
+		return false
+	}
+	updated.ID = id
+	if updated.Title != old.Title {
+		delete(db.titleToID, old.Title)
+		db.titleToID[updated.Title] = id
+	}
+	db.movies[id] = updated
+	return true
+}
+
+func (db *MemoryDB) DeleteMovieByID(id uint64) bool {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	old, ok := db.movies[id]
+	if !ok {
+		return false
+	}
+	delete(db.movies, id)
+	delete(db.characters, id)
+	if old.Title != "" {
+		delete(db.titleToID, old.Title)
+	}
+	return true
 }
