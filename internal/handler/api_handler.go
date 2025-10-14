@@ -2,17 +2,22 @@ package handler
 
 import (
 	"context"
+	"strings"
+
 	"project/internal/api"
 	"project/internal/db"
 	"project/internal/entity"
+
+	"github.com/go-resty/resty/v2"
 )
 
 type ApiHandler struct {
-	db *db.MemoryDB
+	db     *db.MemoryDB
+	client *resty.Client
 }
 
-func NewApiHandler(db *db.MemoryDB) *ApiHandler {
-	return &ApiHandler{db: db}
+func NewApiHandler(db *db.MemoryDB, client *resty.Client) *ApiHandler {
+	return &ApiHandler{db: db, client: client}
 }
 
 // Movies
@@ -90,6 +95,15 @@ func (h *ApiHandler) PostCharacters(ctx context.Context, req api.PostCharactersR
 		return api.PostCharacters400Response{}, nil
 	}
 	c := *req.Body
+
+	// sw api check for star wars movie
+	if strings.EqualFold(c.Movie, "star wars") {
+		exists, err := h.swapiCharacterExists(ctx, c.Name)
+		if err != nil || !exists {
+			return api.PostCharacters400Response{}, nil
+		}
+	}
+
 	ent := entity.Character{Movie: c.Movie, Name: c.Name}
 	if ok := h.db.AddCharacter(c.Movie, ent); !ok {
 		return api.PostCharacters400Response{}, nil
@@ -137,4 +151,37 @@ func (h *ApiHandler) PutCharactersCharacterId(ctx context.Context, req api.PutCh
 		return api.PutCharactersCharacterId200JSONResponse(api.Character{CharacterId: idPtr, Movie: ent.Movie, MovieId: ent.MovieID, Name: ent.Name}), nil
 	}
 	return api.PutCharactersCharacterId404Response{}, nil
+}
+
+// star wars api check
+func (h *ApiHandler) swapiCharacterExists(ctx context.Context, name string) (bool, error) {
+	if h.client == nil {
+		return false, nil
+	}
+
+	type swapiPeopleResponse struct {
+		Count   int `json:"count"`
+		Results []struct {
+			Name string `json:"name"`
+		} `json:"results"`
+	}
+
+	var payload swapiPeopleResponse
+	resp, err := h.client.R().
+		SetContext(ctx).
+		SetQueryParam("search", name).
+		SetResult(&payload).
+		Get("/api/people/")
+	if err != nil {
+		return false, err
+	}
+	if resp.IsError() {
+		return false, nil
+	}
+	for _, r := range payload.Results {
+		if strings.EqualFold(r.Name, name) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

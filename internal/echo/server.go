@@ -9,6 +9,7 @@ import (
 	"project/internal/db"
 	"project/internal/handler"
 
+	"github.com/go-resty/resty/v2"
 	e "github.com/labstack/echo/v4"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -23,8 +24,8 @@ func New(log *zap.Logger) *e.Echo {
 	return srv
 }
 
-func RegisterAPIRoutes(srv *e.Echo, database *db.MemoryDB) {
-	h := handler.NewApiHandler(database)
+func RegisterAPIRoutes(srv *e.Echo, database *db.MemoryDB, client *resty.Client) {
+	h := handler.NewApiHandler(database, client)
 	api.RegisterHandlers(srv, api.NewStrictHandler(h, nil))
 }
 

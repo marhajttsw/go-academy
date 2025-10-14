@@ -4,6 +4,8 @@ import (
 	"project/internal/db"
 	appEcho "project/internal/echo"
 	"project/internal/handler"
+	"project/internal/restclient"
+	"time"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -19,6 +21,17 @@ func main() {
 			func() appEcho.Config { return appEcho.Config{Address: ":8080"} },
 			appEcho.New,
 			zap.NewExample,
+			// resty client wiring
+			func() restclient.Config {
+				return restclient.Config{
+					BaseURL: "https://swapi.dev", // change to your external API base
+					Timeout: 5 * time.Second,
+					Headers: map[string]string{
+						"User-Agent": "project-resty-client",
+					},
+				}
+			},
+			restclient.New,
 		),
 		fx.Invoke(
 			handler.RegisterHandlers,
