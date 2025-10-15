@@ -110,13 +110,16 @@ func (h *ApiHandler) PostCharacters(ctx context.Context, req api.PostCharactersR
 	}
 	chars := h.db.GetCharacters(c.Movie)
 	var assigned *uint64
+	var movieID uint64
 	if len(chars) > 0 {
-		v := chars[len(chars)-1].CharacterId
+		last := chars[len(chars)-1]
+		v := last.CharacterId
+		movieID = last.MovieID
 		if v != 0 {
 			assigned = &v
 		}
 	}
-	return api.PostCharacters201JSONResponse(api.Character{CharacterId: assigned, Movie: c.Movie, MovieId: ent.MovieID, Name: c.Name}), nil
+	return api.PostCharacters201JSONResponse(api.Character{CharacterId: assigned, Movie: c.Movie, MovieId: movieID, Name: c.Name}), nil
 }
 
 func (h *ApiHandler) DeleteCharactersCharacterId(ctx context.Context, req api.DeleteCharactersCharacterIdRequestObject) (api.DeleteCharactersCharacterIdResponseObject, error) {
