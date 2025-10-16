@@ -1,7 +1,7 @@
 package db
 
 import (
-	"project/entity"
+	"project/internal/entity"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
