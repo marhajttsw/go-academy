@@ -1,0 +1,31 @@
+version: "3.9"
+services:
+  app:
+    build: .
+    image: go-academy
+    container_name: go-academy-app
+    working_dir: /app
+    command: ["go", "run", "main.go"]
+    volumes:
+      - ./:/app
+    ports:
+      - "8080:8080"
+    networks:
+      - testnet
+
+  k6:
+    image: grafana/k6:latest
+    working_dir: /scripts
+    volumes:
+      - ./k6:/scripts:ro
+    environment:
+      - BASE_URL=http://app:8080
+    depends_on:
+      - app
+    entrypoint: ["sh", "-lc"]
+    command: ["sleep 3; k6 run smoke.js"]
+    networks:
+      - testnet
+
+networks:
+  testnet:
