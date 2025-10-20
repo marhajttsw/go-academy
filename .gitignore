@@ -12,4 +12,5 @@ coverage/
 *.env
 
 # Certificates
-cert/
+# Ignore only the root-level generated certs directory
+/cert/
