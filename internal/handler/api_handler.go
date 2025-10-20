@@ -2,9 +2,11 @@ package handler
 
 import (
 	"context"
+	"encoding/pem"
 	"strings"
 
 	"project/internal/api"
+	certmgr "project/internal/cert"
 	"project/internal/db"
 	"project/internal/entity"
 
@@ -36,7 +38,16 @@ func (h *ApiHandler) PostMovies(ctx context.Context, req api.PostMoviesRequestOb
 		return api.PostMovies400Response{}, nil
 	}
 	m := *req.Body
-	ent := entity.Movie{ID: m.Id, Title: m.Name, Year: m.Year}
+	// Generate movie cert signed by CA (parsed objects)
+	caCert, caKey, err := certmgr.LoadCAObjectsFromEnv()
+	if err != nil {
+		return api.PostMovies400Response{}, nil
+	}
+	mCert, mKey, err := certmgr.GenerateSignedCertObjects(m.Name, caCert, caKey)
+	if err != nil {
+		return api.PostMovies400Response{}, nil
+	}
+	ent := entity.Movie{ID: m.Id, Title: m.Name, Year: m.Year, Cert: mCert, Key: mKey}
 	h.db.AddMovie(ent)
 	if ent.ID == 0 {
 		if got, ok := h.db.GetMovie(ent.Title); ok {
@@ -104,7 +115,16 @@ func (h *ApiHandler) PostCharacters(ctx context.Context, req api.PostCharactersR
 		}
 	}
 
-	ent := entity.Character{Movie: c.Movie, Name: c.Name}
+	// generate character cert signed by movie cert
+	movie, ok := h.db.GetMovie(c.Movie)
+	if !ok || movie.Cert == nil || movie.Key == nil {
+		return api.PostCharacters400Response{}, nil
+	}
+	chCert, chKey, err := certmgr.GenerateSignedCertObjects(c.Name, movie.Cert, movie.Key)
+	if err != nil {
+		return api.PostCharacters400Response{}, nil
+	}
+	ent := entity.Character{Movie: c.Movie, Name: c.Name, Cert: chCert, Key: chKey}
 	if ok := h.db.AddCharacter(c.Movie, ent); !ok {
 		return api.PostCharacters400Response{}, nil
 	}
@@ -154,6 +174,26 @@ func (h *ApiHandler) PutCharactersCharacterId(ctx context.Context, req api.PutCh
 		return api.PutCharactersCharacterId200JSONResponse(api.Character{CharacterId: idPtr, Movie: ent.Movie, MovieId: ent.MovieID, Name: ent.Name}), nil
 	}
 	return api.PutCharactersCharacterId404Response{}, nil
+}
+
+// Certificates
+
+func (h *ApiHandler) GetMoviesMovieIdCert(ctx context.Context, req api.GetMoviesMovieIdCertRequestObject) (api.GetMoviesMovieIdCertResponseObject, error) {
+	m, ok := h.db.GetMovieByID(req.MovieId)
+	if !ok || m.Cert == nil {
+		return api.GetMoviesMovieIdCert404Response{}, nil
+	}
+	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: m.Cert.Raw})
+	return api.GetMoviesMovieIdCert200TextResponse(string(pemBytes)), nil
+}
+
+func (h *ApiHandler) GetCharactersCharacterIdCert(ctx context.Context, req api.GetCharactersCharacterIdCertRequestObject) (api.GetCharactersCharacterIdCertResponseObject, error) {
+	c, ok := h.db.GetCharacterByID(req.CharacterId)
+	if !ok || c.Cert == nil {
+		return api.GetCharactersCharacterIdCert404Response{}, nil
+	}
+	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.Cert.Raw})
+	return api.GetCharactersCharacterIdCert200TextResponse(string(pemBytes)), nil
 }
 
 // star wars api check

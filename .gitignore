@@ -1,0 +1,15 @@
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Go build artifacts
+bin/
+coverage/
+*.out
+
+# Docker
+*.env
+
+# Certificates
+cert/

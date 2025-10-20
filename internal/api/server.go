@@ -58,6 +58,9 @@ type ServerInterface interface {
 	// Replace a character by ID
 	// (PUT /characters/{characterId})
 	PutCharactersCharacterId(ctx echo.Context, characterId uint64) error
+	// Get character certificate
+	// (GET /characters/{characterId}/cert)
+	GetCharactersCharacterIdCert(ctx echo.Context, characterId uint64) error
 	// List movies
 	// (GET /movies)
 	GetMovies(ctx echo.Context) error
@@ -73,6 +76,9 @@ type ServerInterface interface {
 	// Replace a movie by ID
 	// (PUT /movies/{movieId})
 	PutMoviesMovieId(ctx echo.Context, movieId uint64) error
+	// Get movie certificate
+	// (GET /movies/{movieId}/cert)
+	GetMoviesMovieIdCert(ctx echo.Context, movieId uint64) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -146,6 +152,22 @@ func (w *ServerInterfaceWrapper) PutCharactersCharacterId(ctx echo.Context) erro
 	return err
 }
 
+// GetCharactersCharacterIdCert converts echo context to params.
+func (w *ServerInterfaceWrapper) GetCharactersCharacterIdCert(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "characterId" -------------
+	var characterId uint64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "characterId", ctx.Param("characterId"), &characterId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter characterId: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetCharactersCharacterIdCert(ctx, characterId)
+	return err
+}
+
 // GetMovies converts echo context to params.
 func (w *ServerInterfaceWrapper) GetMovies(ctx echo.Context) error {
 	var err error
@@ -212,6 +234,22 @@ func (w *ServerInterfaceWrapper) PutMoviesMovieId(ctx echo.Context) error {
 	return err
 }
 
+// GetMoviesMovieIdCert converts echo context to params.
+func (w *ServerInterfaceWrapper) GetMoviesMovieIdCert(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "movieId" -------------
+	var movieId uint64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "movieId", ctx.Param("movieId"), &movieId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter movieId: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetMoviesMovieIdCert(ctx, movieId)
+	return err
+}
+
 // This is a simple interface which specifies echo.Route addition functions which
 // are present on both echo.Echo and echo.Group, since we want to allow using
 // either of them for path registration
@@ -245,11 +283,13 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	router.DELETE(baseURL+"/characters/:characterId", wrapper.DeleteCharactersCharacterId)
 	router.GET(baseURL+"/characters/:characterId", wrapper.GetCharactersCharacterId)
 	router.PUT(baseURL+"/characters/:characterId", wrapper.PutCharactersCharacterId)
+	router.GET(baseURL+"/characters/:characterId/cert", wrapper.GetCharactersCharacterIdCert)
 	router.GET(baseURL+"/movies", wrapper.GetMovies)
 	router.POST(baseURL+"/movies", wrapper.PostMovies)
 	router.DELETE(baseURL+"/movies/:movieId", wrapper.DeleteMoviesMovieId)
 	router.GET(baseURL+"/movies/:movieId", wrapper.GetMoviesMovieId)
 	router.PUT(baseURL+"/movies/:movieId", wrapper.PutMoviesMovieId)
+	router.GET(baseURL+"/movies/:movieId/cert", wrapper.GetMoviesMovieIdCert)
 
 }
 
@@ -373,6 +413,32 @@ type PutCharactersCharacterId404Response struct {
 }
 
 func (response PutCharactersCharacterId404Response) VisitPutCharactersCharacterIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type GetCharactersCharacterIdCertRequestObject struct {
+	CharacterId uint64 `json:"characterId"`
+}
+
+type GetCharactersCharacterIdCertResponseObject interface {
+	VisitGetCharactersCharacterIdCertResponse(w http.ResponseWriter) error
+}
+
+type GetCharactersCharacterIdCert200TextResponse string
+
+func (response GetCharactersCharacterIdCert200TextResponse) VisitGetCharactersCharacterIdCertResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(200)
+
+	_, err := w.Write([]byte(response))
+	return err
+}
+
+type GetCharactersCharacterIdCert404Response struct {
+}
+
+func (response GetCharactersCharacterIdCert404Response) VisitGetCharactersCharacterIdCertResponse(w http.ResponseWriter) error {
 	w.WriteHeader(404)
 	return nil
 }
@@ -501,6 +567,32 @@ func (response PutMoviesMovieId404Response) VisitPutMoviesMovieIdResponse(w http
 	return nil
 }
 
+type GetMoviesMovieIdCertRequestObject struct {
+	MovieId uint64 `json:"movieId"`
+}
+
+type GetMoviesMovieIdCertResponseObject interface {
+	VisitGetMoviesMovieIdCertResponse(w http.ResponseWriter) error
+}
+
+type GetMoviesMovieIdCert200TextResponse string
+
+func (response GetMoviesMovieIdCert200TextResponse) VisitGetMoviesMovieIdCertResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(200)
+
+	_, err := w.Write([]byte(response))
+	return err
+}
+
+type GetMoviesMovieIdCert404Response struct {
+}
+
+func (response GetMoviesMovieIdCert404Response) VisitGetMoviesMovieIdCertResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// List characters
@@ -518,6 +610,9 @@ type StrictServerInterface interface {
 	// Replace a character by ID
 	// (PUT /characters/{characterId})
 	PutCharactersCharacterId(ctx context.Context, request PutCharactersCharacterIdRequestObject) (PutCharactersCharacterIdResponseObject, error)
+	// Get character certificate
+	// (GET /characters/{characterId}/cert)
+	GetCharactersCharacterIdCert(ctx context.Context, request GetCharactersCharacterIdCertRequestObject) (GetCharactersCharacterIdCertResponseObject, error)
 	// List movies
 	// (GET /movies)
 	GetMovies(ctx context.Context, request GetMoviesRequestObject) (GetMoviesResponseObject, error)
@@ -533,6 +628,9 @@ type StrictServerInterface interface {
 	// Replace a movie by ID
 	// (PUT /movies/{movieId})
 	PutMoviesMovieId(ctx context.Context, request PutMoviesMovieIdRequestObject) (PutMoviesMovieIdResponseObject, error)
+	// Get movie certificate
+	// (GET /movies/{movieId}/cert)
+	GetMoviesMovieIdCert(ctx context.Context, request GetMoviesMovieIdCertRequestObject) (GetMoviesMovieIdCertResponseObject, error)
 }
 
 type StrictHandlerFunc = strictecho.StrictEchoHandlerFunc
@@ -680,6 +778,31 @@ func (sh *strictHandler) PutCharactersCharacterId(ctx echo.Context, characterId 
 	return nil
 }
 
+// GetCharactersCharacterIdCert operation middleware
+func (sh *strictHandler) GetCharactersCharacterIdCert(ctx echo.Context, characterId uint64) error {
+	var request GetCharactersCharacterIdCertRequestObject
+
+	request.CharacterId = characterId
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCharactersCharacterIdCert(ctx.Request().Context(), request.(GetCharactersCharacterIdCertRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCharactersCharacterIdCert")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(GetCharactersCharacterIdCertResponseObject); ok {
+		return validResponse.VisitGetCharactersCharacterIdCertResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
 // GetMovies operation middleware
 func (sh *strictHandler) GetMovies(ctx echo.Context) error {
 	var request GetMoviesRequestObject
@@ -807,6 +930,31 @@ func (sh *strictHandler) PutMoviesMovieId(ctx echo.Context, movieId uint64) erro
 		return err
 	} else if validResponse, ok := response.(PutMoviesMovieIdResponseObject); ok {
 		return validResponse.VisitPutMoviesMovieIdResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetMoviesMovieIdCert operation middleware
+func (sh *strictHandler) GetMoviesMovieIdCert(ctx echo.Context, movieId uint64) error {
+	var request GetMoviesMovieIdCertRequestObject
+
+	request.MovieId = movieId
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMoviesMovieIdCert(ctx.Request().Context(), request.(GetMoviesMovieIdCertRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMoviesMovieIdCert")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(GetMoviesMovieIdCertResponseObject); ok {
+		return validResponse.VisitGetMoviesMovieIdCertResponse(ctx.Response())
 	} else if response != nil {
 		return fmt.Errorf("unexpected response type: %T", response)
 	}
