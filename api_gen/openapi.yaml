@@ -122,6 +122,25 @@ paths:
           description: Movie deleted
         "404":
           description: Movie not found
+  /movies/{movieId}/cert:
+    parameters:
+      - name: movieId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: uint64
+    get:
+      summary: Get movie certificate
+      responses:
+        "200":
+          description: certificate
+          content:
+            text/plain:
+              schema:
+                type: string
+        "404":
+          description: Not found
   /characters:
     get:
       summary: List characters
@@ -197,3 +216,22 @@ paths:
           description: Character deleted
         "404":
           description: Character not found
+  /characters/{characterId}/cert:
+    parameters:
+      - name: characterId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: uint64
+    get:
+      summary: Get character certificate
+      responses:
+        "200":
+          description: certificate
+          content:
+            text/plain:
+              schema:
+                type: string
+        "404":
+          description: Not found

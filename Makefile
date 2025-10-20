@@ -31,3 +31,23 @@ k6-test:
 	docker compose run --rm k6
 	docker compose down
 
+codegen:
+	go generate ./...
+
+#certificate 
+CERT_DIR := cert
+ROOT_KEY := $(CERT_DIR)/rootCA.key
+ROOT_CRT := $(CERT_DIR)/rootCA.crt
+
+cert-root: $(ROOT_CRT)
+$(CERT_DIR):
+	mkdir -p $(CERT_DIR)
+
+$(ROOT_KEY): | $(CERT_DIR)
+	openssl genrsa -out $(ROOT_KEY) 2048
+
+$(ROOT_CRT): $(ROOT_KEY)
+	openssl req -x509 -new -nodes -key $(ROOT_KEY) -sha256 -days 3650 -out $(ROOT_CRT)
+
+cert-clean:
+	rm -f $(ROOT_KEY) $(ROOT_CRT)
